@@ -1,0 +1,95 @@
+<?php
+
+/**
+ * @author Semyon Dragunov <sam.dragunov@gmail.com>
+ * https://github.com/SemyonDragunov
+ */
+
+/**
+ * Implements hook_install().
+ */
+function sl7_call_me_install() {
+	
+	variable_set('sl7_call_me_button_text', t('Call back'));
+	variable_set('sl7_call_me_submit_text', t('Call back'));
+	variable_set('sl7_call_me_button_classes', 'button');
+	
+	// Install fields.
+  $fields = array(
+    array(
+      'field_name' => 'sl7_call_me_phone',
+      'type' => 'text',
+      'cardinality' => 1,
+      'locked' => TRUE,
+      'settings' => array(
+        'max_length' => 30,
+      ),
+    ),
+  );
+  foreach ($fields as $field) {
+    $exists = db_query("SELECT id FROM {field_config} WHERE field_name=:field_name", array(':field_name' => $field['field_name']))->fetchField();
+    if (!$exists) {
+      field_create_field($field);
+    }
+  }
+
+  $instances = array(
+    array(
+      'field_name' => 'sl7_call_me_phone',
+      'label' => t('Phone'),
+      'bundle' => 'sl7_call_me',
+      'default_value' => NULL,
+      'deleted' => 0,
+      'description' => '',
+      'display' => array(
+        'default' => array(
+          'label' => 'above',
+          'module' => 'text',
+          'settings' => array(),
+          'type' => 'text_default',
+          'weight' => 0,
+        ),
+      ),
+      'entity_type' => 'entityform',
+      'required' => 1,
+      'settings' => array(
+        'text_processing' => 0,
+        'user_register_form' => FALSE,
+      ),
+      'widget' => array(
+        'active' => 1,
+        'module' => 'text',
+        'settings' => array(
+          'size' => 60,
+        ),
+        'type' => 'text_textfield',
+        'weight' => 1,
+      ),
+    ),
+  );
+  foreach ($instances as $instance) {
+    $exists = db_query("SELECT id FROM {field_config_instance} WHERE field_name=:field_name AND entity_type=:entity_type AND bundle=:bundle", array(':field_name' => $instance['field_name'], ':entity_type' => $instance['entity_type'], ':bundle' => $instance['bundle']))->fetchField();
+    if (!$exists) {
+      field_create_instance($instance);
+    }
+  }
+}
+
+/**
+ * Implements hook_uninstall().
+ */
+function sl7_call_me_uninstall() {
+  // Delete fields.
+  field_attach_delete_bundle('entityform_type', 'sl7_call_me');
+  db_delete('field_config_instance')->condition('entity_type', 'entityform')->condition('bundle', 'sl7_call_me')->execute();
+
+  // Delete variables.
+  $result = db_select('variable', 'v')
+    ->fields('v', array('name'))
+    ->condition('name', 'sl7_call_me_%', 'LIKE')
+    ->execute();
+
+  foreach ($result as $row) {
+    variable_del($row->name);
+  }
+}

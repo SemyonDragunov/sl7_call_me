@@ -1,0 +1,222 @@
+<?php
+
+/**
+ * @file
+ * The SL7 Call Me module.
+ * 
+ * @author Semyon Dragunov <sam.dragunov@gmail.com>
+ * https://github.com/SemyonDragunov
+ */
+
+/**
+ * Implements hook_menu().
+ */
+function sl7_call_me_menu() {
+
+  $items[SL7_CONTROL_PANEL_ADMIN_PATH . '/call-me'] = array(
+    'title' => t('Requests for calls'),
+    'position' => 'left',
+    'page callback' => 'system_admin_menu_block_page',
+    'access callback' => 'sl7_control_panel_access',
+    'access arguments' => array('view'),
+    'file path' => drupal_get_path('module', 'system'),
+    'file' => 'system.admin.inc',
+  );
+
+  $items[SL7_CONTROL_PANEL_ADMIN_PATH . '/call-me/view'] = array(
+    'title' => t('Viewing calls'),
+    'description' => t('Calls with the form "Call back".'),
+    'page callback' => 'drupal_goto',
+    'page arguments' => array('entityform-submissions/submissions/sl7_call_me/table'),
+    'access arguments' => array('view any entityform'),
+  );
+
+  $items[SL7_CONTROL_PANEL_ADMIN_PATH . '/call-me/settings'] = array(
+    'title' => t('Settings'),
+    'description' => t('Form settings.'),
+    'page callback' => 'drupal_get_form',
+    'page arguments' => array('sl7_call_me_settings_form'),
+    'access arguments' => array('sl7_call_me administer'),
+    'weight' => 20,
+  );
+
+  return $items;
+}
+
+/**
+ * Implement hook_permission().
+ */
+function sl7_call_me_permission() {
+  return array(
+    'sl7_call_me administer' => array('title' => t('Manage the call order form.')),
+  );
+}
+
+/**
+ * Implement hook_admin_paths().
+ */
+function sl7_call_me_admin_paths() {
+  $paths = array(
+    'entityform-submissions/submissions/sl7_call_me' => TRUE,
+    'entityform-submissions/submissions/sl7_call_me/*' => TRUE,
+  );
+
+  return $paths;
+}
+
+/**
+ * Implements hook_block_info().
+ */
+function sl7_call_me_block_info() {
+  $blocks['offer'] = array(
+    'info' => t('Call me'),
+    'status' => 1,
+    'region' => 'action',
+    'weight' => -15,
+    'visibility' => BLOCK_VISIBILITY_NOTLISTED,
+  );
+
+  return $blocks;
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function sl7_call_me_block_view($delta = '') {
+  $block = array();
+
+  if ($delta == 'offer') {
+    $block['content'] = array(
+      '#markup' => '<a class="sl7-call-me-toggle ' . variable_get('sl7_call_me_button_classes', 'button') . '">' . variable_get('sl7_call_me_button_text', t('Call back')) . '</a>',
+      '#attached' => array(
+        'js' => array(
+          drupal_get_path('module', 'sl7_call_me') . '/js/sl7_call_me.js',
+        ),
+      ),
+    );
+  }
+
+  return $block;
+}
+
+function sl7_call_me_settings_form($form, &$form_state) {
+  $form['sl7_call_me_button_text'] = array(
+    '#type' => 'textfield',
+    '#title' => t('The text on the form button'),
+  	'#default_value' => variable_get('sl7_call_me_button_text', t('Call back')),
+    '#required' => TRUE,
+  );
+
+  $form['sl7_call_me_submit_text'] = array(
+    '#type' => 'textfield',
+    '#title' => t('The text on the send button'),
+  	'#default_value' => variable_get('sl7_call_me_submit_text', t('Call back')),
+    '#required' => TRUE,
+  );
+
+  $form['sl7_call_me_button_classes'] = array(
+    '#type' => 'textfield',
+    '#title' => t('Additional CSS classes'),
+    '#description' => t('Specify several CSS classes through a space separator.'),
+    '#default_value' => variable_get('sl7_call_me_button_classes', 'button'),
+  );
+
+  return system_settings_form($form);
+}
+
+function sl7_call_me_entityform_render($subtype, $conf, $args, $context) {
+  module_load_include('inc', 'entityform', 'entityform.admin');
+  $entity_form_name = 'sl7_contact';
+  $entityform = entityform_form_wrapper(entityform_empty_load($entity_form_name), 'submit', 'embedded');
+
+  print render($entityform);
+}
+
+/**
+ * Implement hook_form_FORM_ID_alter().
+ */
+function sl7_call_me_form_sl7_call_me_entityform_edit_form_alter(&$form, &$form_state, $form_id) {
+	$form['actions']['submit']['#value'] = variable_get('sl7_call_me_submit_text', t('Call back'));
+  $form['actions']['submit']['#ajax'] = array(
+    'path' => 'ajax/sl7/entityform/submit',
+    'progress' => array('type' => 'none'),
+  );
+  $form['actions']['submit']['#attributes']['class'][] = 'use-ajax-submit';
+  $form['actions']['submit']['#attributes']['class'][] = 'expand';
+  $form['actions']['submit']['#attributes']['class'][] = 'sl7-call-me-submit';
+}
+
+/**
+ * Implements hook_default_entityform_type().
+ */
+function sl7_call_me_default_entityform_type() {
+  $items = array();
+  $items['sl7_call_me'] = entity_import('entityform_type', '{
+  "type" : "sl7_call_me",
+  "label" : "Call me",
+  "data" : {
+    "draftable" : 0,
+    "draft_redirect_path" : "",
+    "draft_button_text" : "",
+    "draft_save_text" : { "value" : "", "format" : "filtered_html" },
+    "submit_button_text" : "To order",
+    "submit_confirm_msg" : "Expect the call.",
+    "your_submissions" : "",
+    "disallow_resubmit_msg" : "",
+    "delete_confirm_msg" : "",
+    "page_title_view" : "",
+    "preview_page" : 0,
+    "submission_page_title" : "Thank you",
+    "submission_text" : {
+      "value" : "The application was accepted.",
+      "format" : "filtered_html"
+    },
+    "submission_show_submitted" : 0,
+    "submissions_view" : "default",
+    "user_submissions_view" : "default",
+    "form_status" : "ENTITYFORM_OPEN",
+    "roles" : { "1" : "1", "2" : "2", "3" : 0, "4" : 0 },
+    "resubmit_action" : "new",
+    "redirect_path" : "",
+    "instruction_pre" : { "value" : "", "format" : "filtered_html" }
+  },
+  "weight" : "0",
+  "rdf_mapping" : [],
+  "paths" : []
+}');
+  return $items;
+}
+
+/**
+ * Implements hook_default_rules_configuration().
+ */
+function sl7_call_me_default_rules_configuration() {
+  $items = array();
+  $items['rules_sl7_call_me_notification_admin'] = entity_import('rules_config', '{ "rules_sl7_call_me_notification_admin" : {
+    "LABEL" : "Alerting the administration about the order of the call",
+    "PLUGIN" : "reaction rule",
+    "OWNER" : "rules",
+    "REQUIRES" : [ "rules", "entityform" ],
+    "ON" : { "entityform_insert" : [] },
+    "IF" : [
+      { "entity_is_of_bundle" : {
+          "entity" : [ "entityform" ],
+          "type" : "entityform",
+          "bundle" : { "value" : { "sl7_call_me" : "sl7_call_me" } }
+        }
+      }
+    ],
+    "DO" : [
+      { "mail" : {
+          "to" : "[site:mail]",
+          "subject" : "Order a call from the site of [site:name]",
+          "message" : "User left contact information:/r/nPhone: [entityform:sl7_call_me_phone]",
+          "language" : [ "" ]
+        }
+      }
+    ]
+  }
+}');
+
+  return $items;
+}

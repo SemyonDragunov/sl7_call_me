@@ -1,0 +1,18 @@
+name = Call me
+description = Form with a phone and a callback button.
+package = SL7
+version = 7.x-1.0
+core = 7.x
+
+configure = admin/control-panel/call-me/settings
+
+scripts[] = js/SL7CallMe.js
+
+dependencies[] = sl7_control_panel
+dependencies[] = views
+dependencies[] = views_data_export
+dependencies[] = entityform
+dependencies[] = colorbox
+dependencies[] = rules
+dependencies[] = entity
+dependencies[] = entity:entity_token
