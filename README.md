@@ -14,7 +14,7 @@ Form with a phone and a callback button.
 Required modules from SL7:
 * [sl7_control_panel](https://github.com/SemyonDragunov/sl7_control_panel)
 
-For Drupal 7. PHP =< 5.4
+For Drupal 7. PHP >= 5.4 & 7.
 
 Author: Semyon Dragunov [sam.dragunov@gmail.com](sam.dragunov@gmail.com)
 
